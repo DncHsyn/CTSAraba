@@ -84,4 +84,22 @@ public class CarHealth : MonoBehaviour
 
         Destroy(gameObject);
     }
+
+    public void Heal(int amount)
+{
+    if (isDead || amount <= 0)
+    {
+        return;
+    }
+
+    currentHealth += amount;
+
+    currentHealth = Mathf.Clamp(
+        currentHealth,
+        0,
+        maxHealth
+    );
+
+    UpdateColor();
+}
 }
