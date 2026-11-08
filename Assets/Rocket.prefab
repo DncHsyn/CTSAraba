@@ -103,6 +103,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   speed: 10
   damage: 25
+  lifeTime: 5
+  explosionRadius: 2
+  explosionPrefab: {fileID: 9208784235140560219, guid: 9b83eed44ee25914dbd8006f9909755b, type: 3}
 --- !u!58 &8354959221850177042
 CircleCollider2D:
   m_ObjectHideFlags: 0

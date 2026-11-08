@@ -1,22 +1,28 @@
+
 using UnityEngine;
 using System.Collections;
 
 public class BotSpawner : MonoBehaviour
 {
+    [Header("Bot Settings")]
     public GameObject botPrefab;
     public Transform[] spawnPoints;
 
-    public float respawnDelay = 3f;
+    [Header("Respawn Settings")]
+    public float respawnDelay = 2f;
 
-    void Start()
+    private void Start()
     {
-        for (int i = 0; i < spawnPoints.Length; i++)
+        foreach (Transform spawnPoint in spawnPoints)
         {
-            SpawnBot(spawnPoints[i]);
+            if (spawnPoint != null)
+            {
+                SpawnBot(spawnPoint);
+            }
         }
     }
 
-    void SpawnBot(Transform spawnPoint)
+    private void SpawnBot(Transform spawnPoint)
     {
         GameObject newBot = Instantiate(
             botPrefab,
@@ -24,24 +30,39 @@ public class BotSpawner : MonoBehaviour
             spawnPoint.rotation
         );
 
-        CarHealth health = newBot.GetComponent<CarHealth>();
+        CarHealth health =
+            newBot.GetComponent<CarHealth>();
 
         if (health != null)
         {
             health.spawner = this;
             health.mySpawnPoint = spawnPoint;
         }
+        else
+        {
+            Debug.LogError(
+                "Bot prefabında CarHealth scripti bulunamadı!"
+            );
+        }
     }
 
     public void RespawnBot(Transform spawnPoint)
     {
+        if (spawnPoint == null)
+        {
+            return;
+        }
+
         StartCoroutine(RespawnRoutine(spawnPoint));
     }
 
-    IEnumerator RespawnRoutine(Transform spawnPoint)
+    private IEnumerator RespawnRoutine(Transform spawnPoint)
     {
         yield return new WaitForSeconds(respawnDelay);
 
-        SpawnBot(spawnPoint);
+        if (spawnPoint != null)
+        {
+            SpawnBot(spawnPoint);
+        }
     }
 }

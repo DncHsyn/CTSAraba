@@ -1,3 +1,4 @@
+
 using UnityEngine;
 
 public class HealthPickup : MonoBehaviour
@@ -21,13 +22,14 @@ public class HealthPickup : MonoBehaviour
             return;
         }
 
+        // Yalnızca Player can paketini toplayabilir.
         if (!health.CompareTag("Player"))
         {
             return;
         }
 
-        if (health.currentHealth <= 0 ||
-            health.currentHealth >= health.maxHealth)
+        // Canı zaten doluysa paket toplanmaz.
+        if (health.currentHealth >= health.maxHealth)
         {
             return;
         }

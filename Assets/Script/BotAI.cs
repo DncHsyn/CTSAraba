@@ -1,31 +1,35 @@
+
 using UnityEngine;
 
 public class BotAI : MonoBehaviour
 {
+    [Header("Movement")]
     public float speed = 4f;
     public float rotationSpeed = 150f;
 
+    [Header("Detection")]
     public float detectionRange = 10f;
     public float shootingRange = 7f;
-    public float fireCooldown = 2f;
 
+    [Header("Shooting")]
     public GameObject rocketPrefab;
     public Transform firePoint;
+    public float fireCooldown = 2f;
 
     private Rigidbody2D rb;
     private Transform target;
-    private float fireTimer;
 
-    void Start()
+    private float nextFireTime;
+    private float currentRotation;
+
+    private void Start()
     {
         rb = GetComponent<Rigidbody2D>();
     }
 
-    void Update()
+    private void Update()
     {
         FindTarget();
-
-        fireTimer -= Time.deltaTime;
 
         if (target != null)
         {
@@ -35,15 +39,15 @@ public class BotAI : MonoBehaviour
             );
 
             if (distance <= shootingRange &&
-                fireTimer <= 0f)
+                Time.time >= nextFireTime)
             {
                 FireRocket();
-                fireTimer = fireCooldown;
+                nextFireTime = Time.time + fireCooldown;
             }
         }
     }
 
-    void FixedUpdate()
+    private void FixedUpdate()
     {
         if (target == null)
         {
@@ -52,88 +56,99 @@ public class BotAI : MonoBehaviour
         }
 
         Vector2 direction =
-            (target.position - transform.position).normalized;
+            (Vector2)(target.position - transform.position);
 
         float targetAngle =
-            Mathf.Atan2(direction.y, direction.x)
-            * Mathf.Rad2Deg - 90f;
+            Mathf.Atan2(direction.y, direction.x) *
+            Mathf.Rad2Deg - 90f;
 
-        float newAngle = Mathf.MoveTowardsAngle(
+        currentRotation = Mathf.MoveTowardsAngle(
             rb.rotation,
             targetAngle,
             rotationSpeed * Time.fixedDeltaTime
         );
 
-        rb.MoveRotation(newAngle);
+        rb.MoveRotation(currentRotation);
 
         rb.linearVelocity = transform.up * speed;
     }
 
-    void FindTarget()
+    private void FindTarget()
     {
+        target = null;
+
+        float closestDistance = detectionRange;
+
         GameObject[] players =
             GameObject.FindGameObjectsWithTag("Player");
 
         GameObject[] bots =
             GameObject.FindGameObjectsWithTag("Bot");
 
-        Transform closestTarget = null;
-        float closestDistance = detectionRange;
-
-        foreach (GameObject player in players)
+        foreach (GameObject candidate in players)
         {
-            float distance = Vector2.Distance(
-                transform.position,
-                player.transform.position
-            );
-
-            if (distance < closestDistance)
-            {
-                closestDistance = distance;
-                closestTarget = player.transform;
-            }
+            CheckTarget(candidate, ref closestDistance);
         }
 
-        foreach (GameObject bot in bots)
+        foreach (GameObject candidate in bots)
         {
-            if (bot == gameObject)
+            if (candidate == gameObject)
             {
                 continue;
             }
 
-            float distance = Vector2.Distance(
-                transform.position,
-                bot.transform.position
-            );
+            CheckTarget(candidate, ref closestDistance);
+        }
+    }
 
-            if (distance < closestDistance)
-            {
-                closestDistance = distance;
-                closestTarget = bot.transform;
-            }
+    private void CheckTarget(
+        GameObject candidate,
+        ref float closestDistance)
+    {
+        if (candidate == null)
+        {
+            return;
         }
 
-        target = closestTarget;
+        CarHealth health =
+            candidate.GetComponent<CarHealth>();
+
+        if (health == null || health.IsDead())
+        {
+            return;
+        }
+
+        float distance = Vector2.Distance(
+            transform.position,
+            candidate.transform.position
+        );
+
+        if (distance < closestDistance)
+        {
+            closestDistance = distance;
+            target = candidate.transform;
+        }
     }
 
-   void FireRocket()
-{
-    if (rocketPrefab == null || firePoint == null)
+    private void FireRocket()
     {
-        return;
+        if (rocketPrefab == null || firePoint == null)
+        {
+            return;
+        }
+
+        GameObject newRocket = Instantiate(
+            rocketPrefab,
+            firePoint.position,
+            firePoint.rotation
+        );
+
+        Rocket rocket =
+            newRocket.GetComponent<Rocket>();
+
+        if (rocket != null)
+        {
+            rocket.SetOwner(gameObject);
+        }
     }
-
-    GameObject newRocket = Instantiate(
-        rocketPrefab,
-        firePoint.position,
-        firePoint.rotation
-    );
-
-    Rocket rocketScript = newRocket.GetComponent<Rocket>();
-
-    if (rocketScript != null)
-    {
-        rocketScript.SetOwner(gameObject);
-    }
-}
 }

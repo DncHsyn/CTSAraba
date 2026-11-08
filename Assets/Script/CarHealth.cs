@@ -1,83 +1,122 @@
+
 using UnityEngine;
 
 public class CarHealth : MonoBehaviour
 {
+    [Header("Health")]
     public int maxHealth = 100;
     public int currentHealth;
 
-    private SpriteRenderer spriteRenderer;
-    public CameraShake cameraShake; // CameraShake scriptini buraya ekleyin
+    [Header("Visual")]
+    public SpriteRenderer spriteRenderer;
+    public Color fullHealthColor = Color.white;
+    public Color lowHealthColor = Color.red;
 
-    public Color fullHealthColor =
-        new Color(1f, 0.6f, 0.6f);
-
-    public Color lowHealthColor =
-        new Color(0.4f, 0f, 0f);
-
-    [HideInInspector]
+    [Header("Bot Respawn")]
     public BotSpawner spawner;
-
-    [HideInInspector]
     public Transform mySpawnPoint;
 
     private bool isDead = false;
+    private CameraShake cameraShake;
 
-    void Start()
-{
-    currentHealth = maxHealth;
-
-    spriteRenderer = GetComponent<SpriteRenderer>();
-
-    UpdateColor();
-
-    if (CompareTag("Player"))
+    private void Start()
     {
-        cameraShake = FindFirstObjectByType<CameraShake>();
-    }
-}
+        currentHealth = maxHealth;
 
-  public void TakeDamage(int damage)
-{
-    if (isDead || damage <= 0)
-    {
-        return;
+        if (spriteRenderer == null)
+        {
+            spriteRenderer = GetComponent<SpriteRenderer>();
+        }
+
+        if (CompareTag("Player"))
+        {
+            cameraShake = FindFirstObjectByType<CameraShake>();
+        }
+
+        UpdateColor();
     }
 
-    currentHealth -= damage;
-
-    currentHealth = Mathf.Max(currentHealth, 0);
-
-    UpdateColor();
-
-    // Sadece Player hasar aldığında kamera sallansın
-    if (CompareTag("Player") && cameraShake != null)
+    public void TakeDamage(int damage, GameObject attacker = null)
     {
-        cameraShake.Shake();
+        if (isDead || damage <= 0)
+        {
+            return;
+        }
+
+        currentHealth -= damage;
+        currentHealth = Mathf.Clamp(currentHealth, 0, maxHealth);
+
+        UpdateColor();
+
+        // Kamera yalnızca Player hasar aldığında sallanır.
+        if (CompareTag("Player") && cameraShake != null)
+        {
+            cameraShake.Shake();
+        }
+
+        if (currentHealth <= 0)
+        {
+            Die(attacker);
+        }
     }
 
-    if (currentHealth <= 0)
+    public void Heal(int amount)
     {
-        Die();
-    }
-}
+        if (isDead || amount <= 0)
+        {
+            return;
+        }
 
-    void UpdateColor()
+        currentHealth += amount;
+        currentHealth = Mathf.Clamp(currentHealth, 0, maxHealth);
+
+        UpdateColor();
+    }
+
+    private void UpdateColor()
     {
-        float healthPercent =
+        if (spriteRenderer == null)
+        {
+            return;
+        }
+
+        float healthPercentage =
             (float)currentHealth / maxHealth;
 
         spriteRenderer.color = Color.Lerp(
             lowHealthColor,
             fullHealthColor,
-            healthPercent
+            healthPercentage
         );
     }
 
-    void Die()
+    private void Die(GameObject attacker)
     {
+        if (isDead)
+        {
+            return;
+        }
+
         isDead = true;
 
-        if (spawner != null && mySpawnPoint != null)
+        // Yalnızca Player'ın öldürdüğü Bot skor kazandırır.
+        if (CompareTag("Bot") &&
+            attacker != null &&
+            attacker.CompareTag("Player"))
+        {
+            ScoreManager scoreManager =
+                FindFirstObjectByType<ScoreManager>();
+
+            if (scoreManager != null)
+            {
+                scoreManager.AddKill();
+            }
+        }
+
+        // Bot kendi Spawn Point'inden yeniden doğar.
+        if (CompareTag("Bot") &&
+            spawner != null &&
+            mySpawnPoint != null)
         {
             spawner.RespawnBot(mySpawnPoint);
         }
@@ -85,21 +124,8 @@ public class CarHealth : MonoBehaviour
         Destroy(gameObject);
     }
 
-    public void Heal(int amount)
-{
-    if (isDead || amount <= 0)
+    public bool IsDead()
     {
-        return;
+        return isDead;
     }
-
-    currentHealth += amount;
-
-    currentHealth = Mathf.Clamp(
-        currentHealth,
-        0,
-        maxHealth
-    );
-
-    UpdateColor();
-}
 }
